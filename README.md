@@ -1,4 +1,4 @@
-# HandyParticles ✦
+# HandyParticles 
 
 A fullscreen browser-based hand gesture experience using MediaPipe.
 Single HTML file. No install. No build step.
