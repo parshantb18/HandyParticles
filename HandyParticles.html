@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>HandyParticles — Gesture Intelligence Platform</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --accent:#ff4d5e;
+  --accent2:#ff6bca;
+  --accent3:#6bb5ff;
+  --bg:#03020a;
+  --glass:rgba(255,255,255,0.06);
+  --glass-border:rgba(255,255,255,0.1);
+  --mode-accent:var(--accent);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);font-family:'DM Mono',monospace;color:#fff}
+
+/* ─── NOISE ─── */
+#noise{position:fixed;inset:0;z-index:1000;pointer-events:none;opacity:0.025}
+
+/* ─── TOP STRIPE ─── */
+#topStripe{
+  position:fixed;top:0;left:0;right:0;height:2px;z-index:999;
+  background:linear-gradient(90deg,var(--accent),var(--accent2),var(--accent3));
+  background-size:200% 100%;
+  animation:stripeAnim 3s linear infinite;
+}
+@keyframes stripeAnim{0%{background-position:0%}100%{background-position:200%}}
+
+/* ─── SPLASH ─── */
+#splash{
+  position:fixed;inset:0;z-index:9999;background:var(--bg);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px;
+  transition:opacity 0.8s ease,transform 0.8s ease;
+}
+#splash.hidden{opacity:0;pointer-events:none;transform:scale(1.04)}
+.splash-logo{
+  font-family:'Syne',sans-serif;font-weight:800;font-size:clamp(2.6rem,6vw,5rem);
+  background:linear-gradient(135deg,var(--accent),var(--accent3),var(--accent2));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  letter-spacing:-1px;text-align:center;line-height:1;
+}
+.splash-sub{font-family:'DM Mono',monospace;font-size:.75rem;letter-spacing:0.22em;color:rgba(255,255,255,0.4);text-transform:uppercase;}
+.rings{position:relative;width:180px;height:180px;margin:8px 0}
+.ring{
+  position:absolute;border-radius:50%;border:1.5px solid;
+  top:50%;left:50%;transform:translate(-50%,-50%);
+  animation:ringPulse 2.4s ease-in-out infinite;
+}
+.ring:nth-child(1){width:60px;height:60px;border-color:var(--accent);animation-delay:0s}
+.ring:nth-child(2){width:110px;height:110px;border-color:var(--accent2);animation-delay:0.4s}
+.ring:nth-child(3){width:165px;height:165px;border-color:var(--accent3);animation-delay:0.8s}
+@keyframes ringPulse{
+  0%,100%{opacity:0.2;transform:translate(-50%,-50%) scale(1)}
+  50%{opacity:0.7;transform:translate(-50%,-50%) scale(1.06)}
+}
+.feature-pills{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.pill{
+  padding:7px 16px;border-radius:999px;font-size:.72rem;letter-spacing:.08em;
+  background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.7);
+}
+#enterBtn{
+  padding:14px 38px;border-radius:999px;font-family:'Syne',sans-serif;font-weight:700;
+  font-size:1rem;letter-spacing:.04em;cursor:pointer;border:none;
+  background:var(--accent);color:#fff;
+  box-shadow:0 0 28px rgba(255,77,94,0.55),0 0 60px rgba(255,77,94,0.18);
+  transition:transform 0.2s,box-shadow 0.2s;
+}
+#enterBtn:hover{transform:scale(1.04);box-shadow:0 0 40px rgba(255,77,94,0.75)}
+.splash-note{font-size:.7rem;color:rgba(255,255,255,0.28);letter-spacing:.04em}
+
+/* ─── VIDEO ─── */
+#cam{
+  position:fixed;inset:0;width:100%;height:100%;object-fit:cover;
+  transform:scaleX(-1);filter:brightness(0.22) saturate(0.5);z-index:1;
+}
+
+/* ─── CANVASES ─── */
+canvas{position:fixed;inset:0;width:100%;height:100%}
+#bgCanvas{z-index:2}
+#fxCanvas{z-index:3;mix-blend-mode:screen}
+#drawCanvas{z-index:4}
+
+/* ─── TOP BAR ─── */
+#topBar{
+  position:fixed;top:12px;left:50%;transform:translateX(-50%);
+  z-index:500;display:flex;align-items:center;gap:12px;
+  background:rgba(3,2,10,0.65);
+  backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+  border:1px solid var(--glass-border);border-radius:999px;padding:8px 14px;
+}
+.brand{
+  font-family:'Syne',sans-serif;font-weight:800;font-size:.92rem;letter-spacing:-.01em;
+  background:linear-gradient(90deg,var(--accent),var(--accent2));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;white-space:nowrap;
+}
+.beta-pill{
+  font-size:.58rem;padding:2px 7px;border-radius:999px;letter-spacing:.08em;
+  background:rgba(255,77,94,0.18);border:1px solid rgba(255,77,94,0.35);
+  color:var(--accent);text-transform:uppercase;
+}
+.mode-switcher{
+  display:flex;background:rgba(255,255,255,0.05);border-radius:999px;
+  border:1px solid rgba(255,255,255,0.08);padding:3px;gap:2px;
+}
+.mode-btn{
+  padding:6px 14px;border-radius:999px;border:none;cursor:pointer;
+  font-family:'DM Mono',monospace;font-size:.72rem;
+  background:transparent;color:rgba(255,255,255,0.5);transition:all 0.25s;
+}
+.mode-btn.active{color:#fff;background:var(--mode-accent);box-shadow:0 0 14px rgba(255,77,94,0.45)}
+.chip{
+  padding:5px 11px;border-radius:999px;font-size:.68rem;letter-spacing:.04em;
+  background:var(--glass);border:1px solid var(--glass-border);
+  display:flex;align-items:center;gap:5px;white-space:nowrap;
+}
+.cam-dot{width:6px;height:6px;border-radius:50%;background:#444;transition:background .3s}
+.cam-dot.live{background:var(--accent);box-shadow:0 0 6px var(--accent);animation:blink 1.2s ease infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.4}}
+@media(max-width:600px){.mode-btn .label{display:none}.brand{font-size:.8rem}}
+
+/* ─── BOTTOM HUD ─── */
+#hud{
+  position:fixed;bottom:22px;left:50%;transform:translateX(-50%);
+  z-index:500;display:flex;align-items:center;gap:8px;
+  background:rgba(3,2,10,0.7);backdrop-filter:blur(14px);
+  border:1px solid var(--glass-border);border-radius:999px;padding:8px 18px;
+  font-size:.76rem;letter-spacing:.05em;
+}
+#gestureLabel{color:rgba(255,255,255,0.7);min-width:90px;text-align:center}
+.active-dot{width:7px;height:7px;border-radius:50%;background:var(--accent);opacity:0;transition:opacity .2s}
+.active-dot.on{opacity:1;box-shadow:0 0 8px var(--accent);animation:blink 0.8s ease infinite}
+
+/* ─── HELP PANEL ─── */
+#helpPanel{
+  position:fixed;bottom:22px;right:18px;z-index:500;
+  background:rgba(3,2,10,0.72);backdrop-filter:blur(16px);
+  border:1px solid var(--glass-border);border-radius:14px;
+  padding:14px 16px;max-width:220px;
+  font-size:.66rem;line-height:1.7;color:rgba(255,255,255,0.5);
+}
+#helpPanel h4{font-family:'Syne',sans-serif;font-weight:700;font-size:.75rem;color:rgba(255,255,255,0.8);margin-bottom:8px;}
+
+/* ─── SHAKE RING ─── */
+#shakeRing{position:fixed;bottom:78px;right:26px;z-index:501;display:none}
+
+/* ─── CLEAR BTN ─── */
+#clearBtn{
+  position:fixed;bottom:22px;right:18px;z-index:502;display:none;
+  padding:9px 18px;border-radius:999px;border:1px solid rgba(107,181,255,0.35);
+  background:rgba(107,181,255,0.12);color:var(--accent3);
+  font-family:'DM Mono',monospace;font-size:.72rem;cursor:pointer;transition:all .2s;
+}
+#clearBtn:hover{background:rgba(107,181,255,0.22)}
+
+/* ─── TOAST ─── */
+#toast{
+  position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(0.85);
+  z-index:600;font-family:'Syne',sans-serif;font-weight:800;
+  font-size:clamp(2rem,5vw,3.5rem);pointer-events:none;opacity:0;
+  text-shadow:0 0 30px currentColor;color:var(--mode-accent);
+  transition:opacity 0.2s,transform 0.3s cubic-bezier(0.34,1.56,0.64,1);text-align:center;
+}
+#toast.show{opacity:1;transform:translate(-50%,-50%) scale(1)}
+</style>
+</head>
+<body>
+
+<svg id="noise" xmlns="http://www.w3.org/2000/svg"><filter id="f"><feTurbulence type="fractalNoise" baseFrequency="0.75" numOctaves="4" stitchTiles="stitch"/></filter><rect width="100%" height="100%" filter="url(#f)" opacity="1"/></svg>
+<div id="topStripe"></div>
+
+<!-- SPLASH -->
+<div id="splash">
+  <div class="splash-logo">HandyParticles</div>
+  <div class="splash-sub">Gesture Intelligence Platform</div>
+  <div class="rings"><div class="ring"></div><div class="ring"></div><div class="ring"></div></div>
+  <div class="feature-pills">
+    <div class="pill">⚡ Real-time Tracking</div>
+    <div class="pill">✦ Gesture Physics</div>
+    <div class="pill">✏ Air Drawing</div>
+  </div>
+  <button id="enterBtn">Enter Experience</button>
+  <div class="splash-note">Camera access required · Best in Chrome / Edge</div>
+</div>
+
+<video id="cam" autoplay playsinline muted></video>
+<canvas id="bgCanvas"></canvas>
+<canvas id="fxCanvas"></canvas>
+<canvas id="drawCanvas"></canvas>
+
+<!-- TOP BAR -->
+<div id="topBar">
+  <span class="brand">HandyParticles</span>
+  <span class="beta-pill">Beta</span>
+  <div class="mode-switcher">
+    <button class="mode-btn active" data-mode="play">▶ <span class="label">Play</span></button>
+    <button class="mode-btn" data-mode="shapes">♥ <span class="label">Shapes</span></button>
+    <button class="mode-btn" data-mode="write">✏ <span class="label">Write</span></button>
+  </div>
+  <div class="chip"><span class="cam-dot" id="camDot"></span><span id="fpsChip">0 fps</span></div>
+  <div class="chip">🖐 <span id="handChip">0</span></div>
+</div>
+
+<!-- HUD -->
+<div id="hud">
+  <span id="gestureLabel">No gesture</span>
+  <span class="active-dot" id="activeDot"></span>
+</div>
+
+<!-- HELP PANEL -->
+<div id="helpPanel">
+  <h4 id="helpTitle">Play Mode</h4>
+  <div id="helpText"></div>
+</div>
+
+<!-- SHAKE RING (Write mode only) -->
+<svg id="shakeRing" width="54" height="54" viewBox="0 0 54 54">
+  <circle cx="27" cy="27" r="22" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="4"/>
+  <circle id="shakeArc" cx="27" cy="27" r="22" fill="none" stroke="var(--accent3)" stroke-width="4"
+    stroke-linecap="round" stroke-dasharray="138.2" stroke-dashoffset="138.2"
+    transform="rotate(-90 27 27)" style="transition:stroke-dashoffset .15s,stroke .15s"/>
+</svg>
+
+<button id="clearBtn" onclick="clearDrawCanvas()">🗑 Clear Canvas</button>
+<div id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/hands.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.1675466862/camera_utils.js" crossorigin="anonymous"></script>
+<script>
+// ══════════════════════════════════════════
+//  HandyParticles · Core Engine
+// ══════════════════════════════════════════
+
+const $ = id => document.getElementById(id);
+
+// ─── CANVAS SETUP ───
+const bgC = $('bgCanvas'), bgX = bgC.getContext('2d');
+const fxC = $('fxCanvas'), fxX = fxC.getContext('2d');
+const dwC = $('drawCanvas'), dwX = dwC.getContext('2d');
+
+function resizeAll(){
+  [bgC,fxC,dwC].forEach(c=>{c.width=innerWidth;c.height=innerHeight});
+  initMatrix();
+}
+window.addEventListener('resize', resizeAll);
+
+// ─── STATE ───
+let mode = 'play';
+let hands = [];
+let frameCount = 0, fps = 0, lastFpsTime = performance.now();
+let audioCtx = null, humOsc = null, humGain = null;
+let toastTimeout = null;
+let shakeProg = 0, shakeCooldown = 0, wristXHist = [];
+let drawPaths = [], activePath = null, penDown = false;
+let prevHandVel = 0, prevWristX = 0;
+
+// ─── MODE CONFIG ───
+const MODE_ACCENT = {play:'#ff4d5e', shapes:'#ff6bca', write:'#6bb5ff'};
+const HELP = {
+  play:{
+    title:'Play Mode',
+    text:'✦ Move hands to trail particles\n✦ Pinch thumb+index to zap\n✦ Both hands: lightning between tips\n✦ Inter-hand distance controls hum pitch'
+  },
+  shapes:{
+    title:'Shapes Mode',
+    text:'♥ Both palms close + fingers open = Heart\n✌ Index+middle up, rest down = Peace\n💥 Both fists closed = Star Burst\n\nRequires both hands'
+  },
+  write:{
+    title:'Write Mode',
+    text:'✏ Point index finger to draw\n✦ Pinch to lift pen\n🌊 Open palm + shake wrist to clear\n✦ Shake progress ring (bottom-right)'
+  }
+};
+
+// ─── MATRIX RAIN ───
+let matrixCols=[], matrixDrops=[], matrixHue=0;
+const KANA_START=0x30A0, KANA_END=0x30FF;
+function randomKana(){return String.fromCharCode(KANA_START+Math.floor(Math.random()*(KANA_END-KANA_START)))}
+
+function initMatrix(){
+  const cols = Math.floor(innerWidth/15);
+  matrixCols = Array.from({length:cols},(_,i)=>i*15);
+  matrixDrops = matrixCols.map(()=>Math.random()*-innerHeight/15|0);
+}
+
+function drawMatrix(vel){
+  const speed = 0.5 + vel*2.5;
+  matrixHue = (matrixHue+0.3)%360;
+  bgX.fillStyle = `rgba(3,2,10,${0.12+vel*0.12})`;
+  bgX.fillRect(0,0,bgC.width,bgC.height);
+  bgX.font = `15px 'DM Mono',monospace`;
+  matrixDrops.forEach((y,i)=>{
+    const x = matrixCols[i];
+    const alpha = 0.15+Math.random()*0.5;
+    bgX.fillStyle = `hsla(${matrixHue},80%,65%,${alpha})`;
+    bgX.fillText(randomKana(), x, y*15);
+    if(y*15 > bgC.height && Math.random()>0.975) matrixDrops[i]=0;
+    matrixDrops[i] += speed;
+  });
+}
+
+// ─── PARTICLES ───
+let particles=[];
+function spawnParticles(x,y,count,color){
+  for(let i=0;i<count;i++){
+    const angle=Math.random()*Math.PI*2, speed=1.5+Math.random()*4;
+    particles.push({
+      x,y,vx:Math.cos(angle)*speed,vy:Math.sin(angle)*speed-2,
+      life:45,maxLife:45,r:Math.random()*3+1.5,color
+    });
+  }
+}
+function updateParticles(){
+  particles=particles.filter(p=>p.life>0);
+  particles.forEach(p=>{
+    p.x+=p.vx; p.y+=p.vy; p.vy+=0.15; p.life--;
+    const t=p.life/p.maxLife;
+    fxX.beginPath();
+    fxX.arc(p.x,p.y,p.r*t,0,Math.PI*2);
+    fxX.fillStyle=p.color.replace(/[\d.]+\)$/,`${t})`);
+    fxX.fill();
+  });
+}
+
+// ─── RIPPLES ───
+let ripples=[];
+function spawnRipple(x,y,color){
+  ripples.push({x,y,r:0,maxR:90,life:40,maxLife:40,color});
+}
+function updateRipples(){
+  ripples=ripples.filter(r=>r.life>0);
+  ripples.forEach(r=>{
+    const t=1-r.life/r.maxLife;
+    r.r=r.maxR*t*(2-t); r.life--;
+    const a=(r.life/r.maxLife)*0.7;
+    fxX.beginPath(); fxX.arc(r.x,r.y,r.r,0,Math.PI*2);
+    fxX.strokeStyle=r.color.replace(/[\d.]+\)$/,`${a})`);
+    fxX.lineWidth=2.5; fxX.stroke();
+    fxX.beginPath(); fxX.arc(r.x,r.y,r.r*0.6,0,Math.PI*2);
+    fxX.strokeStyle=r.color.replace(/[\d.]+\)$/,`${a*0.5})`);
+    fxX.lineWidth=1.5; fxX.stroke();
+  });
+}
+
+// ─── AUDIO ───
+function initAudio(){
+  if(audioCtx) return;
+  audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+  humOsc = audioCtx.createOscillator();
+  humGain = audioCtx.createGain();
+  humOsc.type='sine'; humOsc.frequency.value=80;
+  humGain.gain.value=0;
+  humOsc.connect(humGain); humGain.connect(audioCtx.destination);
+  humOsc.start();
+}
+function playZap(){
+  if(!audioCtx) return;
+  const o=audioCtx.createOscillator(), g=audioCtx.createGain();
+  o.type='sawtooth'; o.frequency.setValueAtTime(700,audioCtx.currentTime);
+  o.frequency.exponentialRampToValueAtTime(30,audioCtx.currentTime+0.12);
+  g.gain.setValueAtTime(0.25,audioCtx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+0.12);
+  o.connect(g); g.connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime+0.13);
+}
+function playPop(){
+  if(!audioCtx) return;
+  const o=audioCtx.createOscillator(), g=audioCtx.createGain();
+  o.type='sine'; const f=300+Math.random()*200;
+  o.frequency.setValueAtTime(f,audioCtx.currentTime);
+  o.frequency.exponentialRampToValueAtTime(f*0.5,audioCtx.currentTime+0.08);
+  g.gain.setValueAtTime(0.2,audioCtx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+0.08);
+  o.connect(g); g.connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime+0.09);
+}
+function setHum(freq,vol){
+  if(!humOsc) return;
+  humOsc.frequency.setTargetAtTime(freq,audioCtx.currentTime,0.1);
+  humGain.gain.setTargetAtTime(vol,audioCtx.currentTime,0.1);
+}
+
+// ─── TOAST ───
+let toastCooldowns={};
+function showToast(msg,color,key){
+  if(key && toastCooldowns[key] && Date.now()<toastCooldowns[key]) return;
+  if(key) toastCooldowns[key]=Date.now()+1500;
+  const t=$('toast'); clearTimeout(toastTimeout);
+  t.textContent=msg; t.style.color=color||'var(--mode-accent)';
+  t.classList.add('show');
+  toastTimeout=setTimeout(()=>t.classList.remove('show'),1600);
+}
+
+// ─── GESTURE LABEL HUD ───
+function setGesture(label){
+  $('gestureLabel').textContent=label;
+  const dot=$('activeDot');
+  if(label && label!=='No gesture'){dot.classList.add('on')}
+  else{dot.classList.remove('on')}
+}
+
+// ─── MODE SWITCH ───
+function setMode(m){
+  mode=m;
+  document.querySelectorAll('.mode-btn').forEach(b=>{
+    b.classList.toggle('active', b.dataset.mode===m);
+    b.style.background = b.dataset.mode===m ? MODE_ACCENT[m] : 'transparent';
+  });
+  document.documentElement.style.setProperty('--mode-accent', MODE_ACCENT[m]);
+  $('helpTitle').textContent=HELP[m].title;
+  $('helpText').innerHTML=HELP[m].text.replace(/\n/g,'<br>');
+  $('clearBtn').style.display = m==='write'?'block':'none';
+  $('shakeRing').style.display = m==='write'?'block':'none';
+  $('helpPanel').style.bottom = m==='write'?'70px':'22px';
+  if(m!=='write'){
+    drawPaths=[]; activePath=null; penDown=false;
+    dwX.clearRect(0,0,dwC.width,dwC.height);
+  }
+}
+document.querySelectorAll('.mode-btn').forEach(b=>{
+  b.addEventListener('click',()=>{initAudio();setMode(b.dataset.mode)});
+});
+
+// ─── DRAW CANVAS ───
+function clearDrawCanvas(){
+  drawPaths=[]; activePath=null; penDown=false;
+  dwX.clearRect(0,0,dwC.width,dwC.height);
+  showToast('🌊 Canvas cleared','var(--accent3)');
+  playPop();
+  shakeProg=0; shakeCooldown=Date.now()+2000;
+  updateShakeRing(0);
+}
+function updateShakeRing(prog){
+  const total=138.2, offset=total*(1-prog);
+  const arc=$('shakeArc');
+  arc.style.strokeDashoffset=offset;
+  const h=Math.round(200+prog*40);
+  arc.style.stroke=`hsl(${h},80%,55%)`;
+}
+
+// ─── MEDIAPIPE HANDS ───
+let mpHands, mpCamera;
+function initMP(){
+  const video=$('cam');
+  mpHands = new Hands({locateFile:f=>`https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/${f}`});
+  mpHands.setOptions({maxNumHands:2,modelComplexity:1,minDetectionConfidence:0.72,minTrackingConfidence:0.72});
+  mpHands.onResults(res=>{
+    hands = res.multiHandLandmarks || [];
+    $('handChip').textContent = hands.length;
+    if(fps>5) $('camDot').classList.add('live');
+    else $('camDot').classList.remove('live');
+  });
+  mpCamera = new Camera(video,{
+    onFrame:async()=>{ await mpHands.send({image:video}); },
+    width:1920, height:1080, frameRate:30
+  });
+  mpCamera.start();
+}
+
+// ─── LANDMARK HELPERS ───
+function lm(hand,i){ return {x:hand[i].x*fxC.width, y:hand[i].y*fxC.height} }
+function dist(a,b){ return Math.hypot(a.x-b.x, a.y-b.y) }
+function normDist(hand,a,b){ return Math.hypot(hand[a].x-hand[b].x, hand[a].y-hand[b].y) }
+function fingerSpread(hand){
+  const tips=[4,8,12,16,20];
+  return tips.reduce((s,t)=>s+normDist(hand,t,0),0)/5;
+}
+function fingerExtended(hand,tip,pip){
+  return normDist(hand,tip,0) > normDist(hand,pip,0)*1.1;
+}
+
+// ─── PLAY MODE ───
+let pinchCooldown={};
+
+function renderPlay(){
+  const t = performance.now()*0.001;
+  fxX.save(); fxX.scale(-1,1); fxX.translate(-fxC.width,0);
+
+  let totalVel=0;
+  hands.forEach((hand,hi)=>{
+    const hue = (t*30 + hi*180)%360;
+    const curWristX = hand[0].x;
+    totalVel += Math.abs(curWristX - prevWristX);
+    prevWristX = curWristX;
+
+    // skeleton connections
+    const connections = [
+      [0,1],[1,2],[2,3],[3,4],
+      [0,5],[5,6],[6,7],[7,8],
+      [5,9],[9,10],[10,11],[11,12],
+      [9,13],[13,14],[14,15],[15,16],
+      [13,17],[17,18],[18,19],[19,20],[0,17]
+    ];
+    connections.forEach(([a,b],ci)=>{
+      const pa=lm(hand,a), pb=lm(hand,b);
+      const ch = (hue+ci*12)%360;
+      const grad = fxX.createLinearGradient(pa.x,pa.y,pb.x,pb.y);
+      grad.addColorStop(0,`hsla(${ch},100%,70%,0.85)`);
+      grad.addColorStop(1,`hsla(${(ch+40)%360},100%,70%,0.85)`);
+      fxX.strokeStyle=grad; fxX.lineWidth=2.5;
+      fxX.shadowColor=`hsla(${ch},100%,70%,0.8)`; fxX.shadowBlur=10;
+      fxX.beginPath(); fxX.moveTo(pa.x,pa.y); fxX.lineTo(pb.x,pb.y); fxX.stroke();
+    });
+    fxX.shadowBlur=0;
+
+    // fingertip blobs + sparkles
+    [4,8,12,16,20].forEach((ti,fi)=>{
+      const p=lm(hand,ti), bh=(hue+fi*30)%360;
+      fxX.beginPath(); fxX.arc(p.x,p.y,6,0,Math.PI*2);
+      fxX.fillStyle=`hsla(${bh},100%,75%,0.9)`;
+      fxX.shadowColor=`hsla(${bh},100%,70%,1)`; fxX.shadowBlur=18; fxX.fill(); fxX.shadowBlur=0;
+      if(Math.random()<0.25) spawnParticles(p.x,p.y,1,`hsla(${bh},100%,75%,1)`);
+    });
+
+    // pinch detection
+    const pidx = `${hi}`;
+    const th=lm(hand,4), idx=lm(hand,8);
+    const pinchD = normDist(hand,4,8);
+    if(pinchD<0.055 && (!pinchCooldown[pidx]||Date.now()>pinchCooldown[pidx])){
+      pinchCooldown[pidx]=Date.now()+600;
+      const mx=(th.x+idx.x)/2, my=(th.y+idx.y)/2;
+      spawnRipple(mx,my,`hsla(${hue},100%,75%,1)`);
+      spawnParticles(mx,my,22,`hsla(${hue},100%,75%,1)`);
+      playZap(); showToast('⚡ Pinch',MODE_ACCENT.play,'pinch');
+    }
+  });
+  prevHandVel = totalVel;
+
+  // two-hand interaction
+  if(hands.length===2){
+    const tips=[4,8,12,16,20];
+    const centroids=hands.map(h=>({
+      x:tips.reduce((s,t)=>s+lm(h,t).x,0)/5,
+      y:tips.reduce((s,t)=>s+lm(h,t).y,0)/5
+    }));
+    const cx=(centroids[0].x+centroids[1].x)/2, cy=(centroids[0].y+centroids[1].y)/2;
+    const interDist = dist(centroids[0],centroids[1]);
+
+    tips.forEach((t,fi)=>{
+      const a=lm(hands[0],t), b=lm(hands[1],t);
+      const grad=fxX.createLinearGradient(a.x,a.y,b.x,b.y);
+      grad.addColorStop(0,`hsla(${(t*20)%360},100%,70%,0.4)`);
+      grad.addColorStop(1,`hsla(${(t*20+180)%360},100%,70%,0.4)`);
+      fxX.strokeStyle=grad; fxX.lineWidth=1.5;
+      fxX.beginPath(); fxX.moveTo(a.x,a.y); fxX.lineTo(b.x,b.y); fxX.stroke();
+      if(dist(a,b)<140){
+        drawLightning(fxX,a.x,a.y,b.x,b.y,`hsla(${(fi*40+t*performance.now()*0.05)%360},100%,85%,0.85)`,4);
+      }
+    });
+
+    // rotating mandala
+    const angle=performance.now()*0.001;
+    const allTips=hands.flatMap(h=>tips.map(t=>lm(h,t)));
+    fxX.beginPath();
+    allTips.forEach((p,i)=>{
+      const rx=cx+(p.x-cx)*Math.cos(angle)-(p.y-cy)*Math.sin(angle);
+      const ry=cy+(p.x-cx)*Math.sin(angle)+(p.y-cy)*Math.cos(angle);
+      i===0?fxX.moveTo(rx,ry):fxX.lineTo(rx,ry);
+    });
+    fxX.closePath();
+    const mGrad=fxX.createLinearGradient(cx-100,cy,cx+100,cy);
+    mGrad.addColorStop(0,'rgba(255,77,94,0.3)'); mGrad.addColorStop(1,'rgba(107,181,255,0.3)');
+    fxX.strokeStyle=mGrad; fxX.lineWidth=1.5; fxX.stroke();
+
+    const norm = Math.min(interDist/500,1);
+    setHum(80+norm*280, 0.08);
+  } else {
+    setHum(80,0);
+  }
+
+  fxX.restore();
+  setGesture(hands.length?'Hand detected':'No gesture');
+}
+
+function drawLightning(ctx,x1,y1,x2,y2,col,segs){
+  ctx.save(); ctx.strokeStyle=col; ctx.lineWidth=1.5;
+  ctx.shadowColor=col; ctx.shadowBlur=12;
+  ctx.beginPath(); ctx.moveTo(x1,y1);
+  const dx=(x2-x1)/segs, dy=(y2-y1)/segs;
+  for(let i=1;i<segs;i++){
+    ctx.lineTo(x1+dx*i+(Math.random()-0.5)*28, y1+dy*i+(Math.random()-0.5)*28);
+  }
+  ctx.lineTo(x2,y2); ctx.stroke();
+  ctx.shadowBlur=0; ctx.restore();
+}
+
+// ─── SHAPES MODE ───
+let shapeCooldown={};
+const TAU=Math.PI*2;
+
+function heartPoint(t){
+  return {
+    x:16*Math.pow(Math.sin(t),3),
+    y:-(13*Math.cos(t)-5*Math.cos(2*t)-2*Math.cos(3*t)-Math.cos(4*t))
+  };
+}
+
+function renderShapes(){
+  if(hands.length<2){setGesture('Need 2 hands');return}
+  fxX.save(); fxX.scale(-1,1); fxX.translate(-fxC.width,0);
+
+  const h0=hands[0], h1=hands[1];
+  const palmD = Math.hypot(h0[0].x-h1[0].x, h0[0].y-h1[0].y);
+  const spread0=fingerSpread(h0), spread1=fingerSpread(h1);
+  const cx = (lm(h0,0).x+lm(h1,0).x)/2;
+  const cy = (lm(h0,0).y+lm(h1,0).y)/2;
+  const t=performance.now()*0.001;
+
+  // HEART
+  const isHeart = palmD<0.35 && spread0>0.09 && spread1>0.09;
+  if(isHeart){
+    if(!shapeCooldown.heart||Date.now()>shapeCooldown.heart){
+      showToast('♥ Heart','#ff6bca','heart'); playPop();
+      shapeCooldown.heart=Date.now()+1200;
+    }
+    const scale=38*(1+0.05*Math.sin(t*4));
+    fxX.save(); fxX.translate(cx,cy);
+    fxX.beginPath();
+    for(let i=0;i<=100;i++){
+      const tt=i/100*TAU, p=heartPoint(tt);
+      i===0?fxX.moveTo(p.x*scale,p.y*scale):fxX.lineTo(p.x*scale,p.y*scale);
+    }
+    fxX.closePath();
+    const hGrad=fxX.createRadialGradient(0,-scale*0.3,5,0,0,scale*1.2);
+    hGrad.addColorStop(0,'rgba(255,180,200,0.9)'); hGrad.addColorStop(1,'rgba(255,77,120,0.4)');
+    fxX.fillStyle=hGrad; fxX.shadowColor='#ff6bca'; fxX.shadowBlur=30; fxX.fill();
+    fxX.strokeStyle='#ff6bca'; fxX.lineWidth=2.5; fxX.stroke();
+    fxX.beginPath(); fxX.ellipse(-scale*0.3,-scale*0.6,scale*0.2,scale*0.1,-0.5,0,TAU);
+    fxX.fillStyle='rgba(255,255,255,0.3)'; fxX.shadowBlur=0; fxX.fill();
+    fxX.restore();
+    setGesture('♥ Heart');
+  }
+
+  // PEACE (check each hand)
+  for(let hi=0;hi<hands.length;hi++){
+    const h=hands[hi];
+    const idx8=normDist(h,8,0), mid12=normDist(h,12,0);
+    const ring16=normDist(h,16,0), pin20=normDist(h,20,0);
+    const isPeace = idx8>0.18&&mid12>0.18&&ring16<0.16&&pin20<0.16;
+    if(isPeace&&!isHeart){
+      if(!shapeCooldown.peace||Date.now()>shapeCooldown.peace){
+        showToast('✌ Peace','#ff6bca','peace'); playPop();
+        shapeCooldown.peace=Date.now()+1200;
+      }
+      const pc=lm(h,9), r=55;
+      fxX.save(); fxX.translate(pc.x,pc.y);
+      fxX.strokeStyle='#ff6bca'; fxX.lineWidth=3;
+      fxX.shadowColor='#ff6bca'; fxX.shadowBlur=22;
+      fxX.beginPath(); fxX.arc(0,0,r,0,TAU); fxX.stroke();
+      fxX.beginPath(); fxX.moveTo(0,-r); fxX.lineTo(0,r); fxX.stroke();
+      fxX.beginPath(); fxX.moveTo(0,0); fxX.lineTo(-r*Math.cos(Math.PI/3),-r*Math.sin(Math.PI/3)); fxX.stroke();
+      fxX.beginPath(); fxX.moveTo(0,0); fxX.lineTo( r*Math.cos(Math.PI/3),-r*Math.sin(Math.PI/3)); fxX.stroke();
+      fxX.shadowBlur=0; fxX.restore();
+      setGesture('✌ Peace');
+    }
+  }
+
+  // STAR BURST (both fists)
+  const fisted = spread0<0.09 && spread1<0.09;
+  if(fisted){
+    if(!shapeCooldown.star||Date.now()>shapeCooldown.star){
+      showToast('💥 Star Burst!','#ff6bca','star'); playZap();
+      spawnParticles(cx,cy,25,'rgba(255,220,80,1)');
+      shapeCooldown.star=Date.now()+1200;
+    }
+    const sr=60+Math.sin(t*8)*10, angle8=t*2;
+    fxX.save(); fxX.translate(cx,cy); fxX.rotate(angle8);
+    const starGrad=fxX.createRadialGradient(0,0,0,0,0,sr);
+    starGrad.addColorStop(0,'rgba(255,255,255,0.95)');
+    starGrad.addColorStop(0.4,'rgba(255,220,50,0.7)');
+    starGrad.addColorStop(1,'rgba(255,150,0,0)');
+    fxX.beginPath();
+    for(let i=0;i<16;i++){
+      const a=i/16*TAU, r2=i%2===0?sr:sr*0.42;
+      i===0?fxX.moveTo(Math.cos(a)*r2,Math.sin(a)*r2):fxX.lineTo(Math.cos(a)*r2,Math.sin(a)*r2);
+    }
+    fxX.closePath();
+    fxX.fillStyle=starGrad; fxX.shadowColor='rgba(255,200,50,0.9)'; fxX.shadowBlur=40; fxX.fill(); fxX.shadowBlur=0;
+    fxX.restore();
+    setGesture('💥 Star Burst');
+  } else if(!isHeart){
+    setGesture('Ready...');
+  }
+
+  fxX.restore();
+}
+
+// ─── WRITE MODE ───
+let writeHue=0;
+
+function renderWrite(){
+  fxX.save(); fxX.scale(-1,1); fxX.translate(-fxC.width,0);
+
+  if(hands.length===0){setGesture('No hand');fxX.restore();return}
+  const hand=hands[0];
+  const idx=lm(hand,8);
+  const thumbIdx = normDist(hand,4,8);
+  const isPenDown = normDist(hand,8,0)>0.17 && thumbIdx>0.06;
+  const isPinch = thumbIdx<0.06;
+
+  // shake detection
+  const wristX = hand[0].x;
+  wristXHist.push(wristX);
+  if(wristXHist.length>30) wristXHist.shift();
+  const ext = [8,12,16,20].filter(t=>fingerExtended(hand,t,t-2)).length;
+  const isOpen = ext>=3;
+
+  if(isOpen && wristXHist.length>=6 && shakeCooldown<Date.now()){
+    let reversals=0;
+    for(let i=2;i<wristXHist.length;i++){
+      const d1=wristXHist[i-1]-wristXHist[i-2], d2=wristXHist[i]-wristXHist[i-1];
+      if(Math.abs(d1)>0.012 && Math.abs(d2)>0.012 && d1*d2<0) reversals++;
+    }
+    shakeProg = Math.min(reversals/6,1);
+    updateShakeRing(shakeProg);
+    if(reversals>=6){ clearDrawCanvas(); wristXHist=[]; }
+  } else if(!isOpen){
+    shakeProg=Math.max(0,shakeProg-0.03);
+    updateShakeRing(shakeProg);
+  }
+
+  if(isPenDown && !isPinch){
+    if(!penDown){
+      writeHue=(writeHue+35)%360;
+      activePath={points:[{x:idx.x,y:idx.y}],hue:writeHue};
+      penDown=true;
+    } else if(activePath){
+      activePath.points.push({x:idx.x,y:idx.y});
+      redrawAllPaths();
+    }
+    setGesture('✏ Drawing');
+    fxX.beginPath(); fxX.arc(idx.x,idx.y,10,0,TAU);
+    const pulse=0.5+0.5*Math.sin(performance.now()*0.008);
+    fxX.strokeStyle=`hsla(${writeHue},100%,70%,${pulse})`;
+    fxX.lineWidth=2; fxX.shadowColor=`hsla(${writeHue},100%,70%,1)`;
+    fxX.shadowBlur=16; fxX.stroke(); fxX.shadowBlur=0;
+  } else if(isPinch && penDown){
+    if(activePath&&activePath.points.length>1) drawPaths.push(activePath);
+    activePath=null; penDown=false;
+    setGesture('✦ Pen up');
+    redrawAllPaths();
+  } else {
+    if(penDown){
+      if(activePath&&activePath.points.length>1) drawPaths.push(activePath);
+      activePath=null; penDown=false; redrawAllPaths();
+    }
+    setGesture('Point to draw');
+  }
+
+  fxX.restore();
+}
+
+function redrawAllPaths(){
+  dwX.clearRect(0,0,dwC.width,dwC.height);
+  dwX.save(); dwX.scale(-1,1); dwX.translate(-dwC.width,0);
+  const allPaths = activePath ? [...drawPaths, activePath] : drawPaths;
+  allPaths.forEach(path=>{
+    if(path.points.length<2) return;
+    dwX.beginPath();
+    dwX.moveTo(path.points[0].x, path.points[0].y);
+    for(let i=1;i<path.points.length-1;i++){
+      const mx=(path.points[i].x+path.points[i+1].x)/2;
+      const my=(path.points[i].y+path.points[i+1].y)/2;
+      dwX.quadraticCurveTo(path.points[i].x,path.points[i].y,mx,my);
+    }
+    const last=path.points[path.points.length-1];
+    dwX.lineTo(last.x,last.y);
+    dwX.strokeStyle=`hsl(${path.hue},100%,70%)`;
+    dwX.lineWidth=4.5; dwX.lineCap='round'; dwX.lineJoin='round';
+    dwX.shadowColor=`hsl(${path.hue},100%,70%)`; dwX.shadowBlur=14;
+    dwX.stroke(); dwX.shadowBlur=0;
+  });
+  dwX.restore();
+}
+
+// ─── MAIN LOOP ───
+let lastTime=0;
+function loop(ts){
+  requestAnimationFrame(loop);
+  const dt=ts-lastTime; lastTime=ts;
+  frameCount++;
+  if(ts-lastFpsTime>1000){
+    fps=Math.round(frameCount*1000/(ts-lastFpsTime));
+    frameCount=0; lastFpsTime=ts;
+    $('fpsChip').textContent=fps+' fps';
+  }
+
+  let vel=0;
+  if(hands.length) vel=prevHandVel*10;
+  vel=Math.min(vel,1);
+
+  drawMatrix(vel);
+  fxX.clearRect(0,0,fxC.width,fxC.height);
+
+  if(mode==='play') renderPlay();
+  else if(mode==='shapes') renderShapes();
+  else if(mode==='write') renderWrite();
+
+  updateParticles();
+  updateRipples();
+}
+
+// ─── INIT ───
+$('enterBtn').addEventListener('click',()=>{
+  initAudio();
+  $('splash').classList.add('hidden');
+  setTimeout(()=>$('splash').style.display='none',900);
+  resizeAll();
+  initMP();
+  setMode('play');
+  requestAnimationFrame(loop);
+});
+
+setMode('play');
+</script>
+</body>
+</html>
